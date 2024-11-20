@@ -1,0 +1,78 @@
+"use client";
+
+import { useEditor, EditorContent, Editor } from "@tiptap/react";
+import { useLiveblocksExtension, FloatingComposer, FloatingThreads, AnchoredThreads } from "@liveblocks/react-tiptap";
+import StarterKit from "@tiptap/starter-kit";
+import { Toolbar } from "./Toolbar";
+import { useThreads } from "@liveblocks/react";
+import { useSyncExternalStore } from "react";
+
+function useIsMobile() {
+  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+}
+
+function subscribe(callback: () => void) {
+  const query = window.matchMedia("(max-width: 1024px)");
+  query.addEventListener("change", callback);
+  return () => query.removeEventListener("change", callback);
+}
+
+function getSnapshot() {
+  const query = window.matchMedia("(max-width: 1024px)");
+  return query.matches;
+}
+
+
+export default function TiptapEditor() {
+  const liveblocks = useLiveblocksExtension();
+
+  const editor = useEditor({
+    editorProps: {
+      attributes: {
+        // Add styles to editor element
+        class: "outline-none flex-1 transition-all",
+      },
+    },
+    extensions: [
+      StarterKit.configure({
+        history: false,
+      }),
+      liveblocks
+    ],
+  });
+
+  return (
+    <div className="relative min-h-screen flex flex-col">
+
+      <div className="relative flex flex-row justify-between w-full py-16 xl:pl-[250px] pl-[100px] gap-[50px]">
+        <div className="relative flex flex-1 flex-col gap-2">
+          <Toolbar editor={editor} />
+          <EditorContent editor={editor} />
+          <FloatingComposer editor={editor} className="w-[350px]" />
+        </div>
+
+
+        <div className="xl:[&:not(:has(.lb-tiptap-anchored-threads))]:pr-[200px] [&:not(:has(.lb-tiptap-anchored-threads))]:pr-[50px]">
+          <Threads editor={editor} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Threads({ editor }: { editor: Editor | null }) {
+  const { threads } = useThreads();
+  const isMobile = useIsMobile();
+
+  if (!threads || !editor) { return null; }
+
+  return isMobile ? (
+    <FloatingThreads threads={threads} editor={editor} />
+  ) : (
+    <AnchoredThreads
+      threads={threads}
+      editor={editor}
+      className="w-[350px] xl:mr-[100px] mr-[50px]"
+    />
+  );
+}
